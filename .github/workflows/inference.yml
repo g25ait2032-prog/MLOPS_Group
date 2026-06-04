@@ -1,6 +1,5 @@
 name: Inference
 
-# Allows you to manually trigger this workflow from the GitHub Actions tab
 on:
   workflow_dispatch:
     inputs:
@@ -14,19 +13,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Check out your repository code
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 2. Build the Docker image inside the GitHub runner
-    - name: Build Docker Image
-      run: |
-        docker build -t mlops-group-inference:latest .
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-    # 3. Run the Docker container and perform inference
+    # Build using GitHub Actions native cache storage backend
+    - name: Build Docker Image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        load: true  
+        tags: mlops-group-inference:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
     - name: Run Inference Container
       env:
-        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        HF_TOKEN: ${{ secrets.HF_TOKEN_gr }}  # <-- Updated to match your exact secret name!
         HF_MODEL: "nagaananth/MLOPS_group-v2"
         INPUT_TEXT: ${{ github.event.inputs.input_text }}
       run: |
