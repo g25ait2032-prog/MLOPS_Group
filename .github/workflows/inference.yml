@@ -13,30 +13,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Debug HF Token
+        run: |
+          if [ -z "${{ secrets.HF_TOKEN_gr }}" ]; then
+            echo "HF_TOKEN_gr is EMPTY"
+            exit 1
+          else
+            echo "HF_TOKEN_gr exists"
+          fi
 
-    # Build using GitHub Actions native cache storage backend
-    - name: Build Docker Image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        load: true  
-        tags: mlops-group-inference:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Run Inference Container
-      env:
-        HF_TOKEN: ${{ secrets.HF_TOKEN_gr }}  # <-- Updated to match your exact secret name!
-        HF_MODEL: "nagaananth/MLOPS_group-v2"
-        INPUT_TEXT: ${{ github.event.inputs.input_text }}
-      run: |
-        docker run --rm \
-          -e HF_TOKEN="$HF_TOKEN" \
-          -e HF_MODEL="$HF_MODEL" \
-          -e INPUT_TEXT="$INPUT_TEXT" \
-          mlops-group-inference:latest
+      - name: Build Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: mlops-group-inference:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Inference Container
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN_gr }}
+          HF_MODEL: "nagaananth/MLOPS_group-v2"
+          INPUT_TEXT: ${{ github.event.inputs.input_text }}
+        run: |
+          docker run --rm \
+            -e HF_TOKEN="$HF_TOKEN" \
+            -e HF_MODEL="$HF_MODEL" \
+            -e INPUT_TEXT="$INPUT_TEXT" \
+            mlops-group-inference:latest
