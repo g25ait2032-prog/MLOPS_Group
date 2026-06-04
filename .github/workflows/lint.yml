@@ -1,0 +1,15 @@
+name: CI Lint
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install flake8
+        run: pip install flake8
+      - name: Run Linting
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
