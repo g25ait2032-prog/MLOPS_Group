@@ -1,103 +1,58 @@
 name: Spam Classification Inference
 
-
-
 on:
-
   workflow_dispatch:
-
     inputs:
-
       input_text:
-
         description: "Message to classify as Ham or Spam"
-
         required: true
-
         default: "URGENT! You have won a 1-week cruise! Call 090xxx to claim now!"
 
-
+# Required to push to GitHub Container Registry (GHCR)
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-
   inference:
-
-    name: Run Model Inference
-
+    name: Run and Publish Inference
     runs-on: ubuntu-latest
-
-
-
     env:
-
       HF_MODEL: nagaananth/MLOPS_group-v2
-
-
+      # This creates a dynamic image name based on your repo
+      IMAGE_NAME: ghcr.io/${{ github.repository }}/inference:latest
 
     steps:
-
       - name: Checkout Source Code
-
         uses: actions/checkout@v4
 
-
-
-      - name: Validate Hugging Face Token
-
-        run: |
-
-          if [ -z "${{ secrets.HF_TOKEN_gr }}" ]; then
-
-            echo "❌ HF_TOKEN_gr secret is missing"
-
-            exit 1
-
-          fi
-
-          echo "✅ Hugging Face token detected"
-
-
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set Up Docker Buildx
-
         uses: docker/setup-buildx-action@v3
 
-
-
-      - name: Build Inference Image
-
+      - name: Build and Push Inference Image
         uses: docker/build-push-action@v6
-
         with:
-
           context: .
-
-          load: true
-
-          tags: mlops-group-inference:latest
-
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
           cache-from: type=gha
-
           cache-to: type=gha,mode=max
-
-
+          build-args: HF_MODEL_NAME=${{ env.HF_MODEL }}
 
       - name: Execute Inference
-
         env:
-
           HF_TOKEN: ${{ secrets.HF_TOKEN_gr }}
-
           INPUT_TEXT: ${{ github.event.inputs.input_text }}
-
         run: |
-
           docker run --rm \
-
             -e HF_TOKEN="$HF_TOKEN" \
-
             -e HF_MODEL="$HF_MODEL" \
-
             -e INPUT_TEXT="$INPUT_TEXT" \
-
-            mlops-group-inference:latest
+            ${{ env.IMAGE_NAME }}
