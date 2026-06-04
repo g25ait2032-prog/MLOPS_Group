@@ -2,16 +2,16 @@ import os
 import sys
 import json
 from transformers import pipeline
-from huggingface_hub import login
 
 def load_pipeline(model_name: str, hf_token: str | None = None):
-    if hf_token:
-        login(token=hf_token)
+    # Removed global login() to bypass the strict whoami-v2 429 rate limit.
+    # Passing token directly inside pipeline handles gated access safely.
     clf = pipeline(
         "text-classification",
         model=model_name,
         tokenizer=model_name,
         device=-1,           # CPU inference for container
+        token=hf_token       # Authenticates download directly
     )
     return clf
 
