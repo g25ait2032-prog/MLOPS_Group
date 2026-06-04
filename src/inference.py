@@ -53,6 +53,7 @@ def predict(
     text: str
 ) -> dict:
 
+    # 1. Tokenize without creating token_type_ids if possible
     inputs = tokenizer(
         text,
         return_tensors="pt",
@@ -60,15 +61,17 @@ def predict(
         max_length=128
     )
 
-    # DistilBERT doesn't use token_type_ids
-    inputs.pop("token_type_ids", None)
+    # 2. Aggressively remove 'token_type_ids' if it exists in the dictionary
+    if "token_type_ids" in inputs:
+        del inputs["token_type_ids"]
 
-    # Move tensors to CPU/GPU
+    # 3. Move tensors to CPU/GPU
     inputs = {
         key: value.to(DEVICE)
         for key, value in inputs.items()
     }
 
+    # 4. Use model call directly
     with torch.no_grad():
         outputs = model(**inputs)
 
