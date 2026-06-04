@@ -1,0 +1,37 @@
+name: Inference
+
+# Allows you to manually trigger this workflow from the GitHub Actions tab
+on:
+  workflow_dispatch:
+    inputs:
+      input_text:
+        description: 'Text message to classify (Ham or Spam)'
+        required: true
+        default: 'URGENT! You have won a 1-week cruise! Call 090xxx to claim now!'
+
+jobs:
+  run-inference:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Check out your repository code
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 2. Build the Docker image inside the GitHub runner
+    - name: Build Docker Image
+      run: |
+        docker build -t mlops-group-inference:latest .
+
+    # 3. Run the Docker container and perform inference
+    - name: Run Inference Container
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        HF_MODEL: "nagaananth/MLOPS_group-v2"
+        INPUT_TEXT: ${{ github.event.inputs.input_text }}
+      run: |
+        docker run --rm \
+          -e HF_TOKEN="$HF_TOKEN" \
+          -e HF_MODEL="$HF_MODEL" \
+          -e INPUT_TEXT="$INPUT_TEXT" \
+          mlops-group-inference:latest
