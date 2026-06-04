@@ -2,11 +2,32 @@ import os
 import sys
 import json
 import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+
+from transformers import (
+    AutoTokenizer,
+    AutoModelForSequenceClassification
+)
 from huggingface_hub import login, whoami
 
 
-def load_model_and_tokenizer(model_name: str, hf_token: str | None = None):
+# ---------------------------------------------------------------------
+# Device Configuration
+# ---------------------------------------------------------------------
+DEVICE = torch.device(
+    "cuda" if torch.cuda.is_available() else "cpu"
+)
+
+
+# ---------------------------------------------------------------------
+# Load Model & Tokenizer
+# ---------------------------------------------------------------------
+def load_model_and_tokenizer(
+    model_name: str,
+    hf_token: str | None = None
+):
+    print(f"Loading model: {model_name}")
+    print(f"Using device: {DEVICE}")
+
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,
         token=hf_token
@@ -17,11 +38,21 @@ def load_model_and_tokenizer(model_name: str, hf_token: str | None = None):
         token=hf_token
     )
 
+    model.to(DEVICE)
     model.eval()
+
     return model, tokenizer
 
 
-def predict(model, tokenizer, text: str) -> dict:
+# ---------------------------------------------------------------------
+# Prediction Function
+# ---------------------------------------------------------------------
+def predict(
+    model,
+    tokenizer,
+    text: str
+) -> dict:
+
     inputs = tokenizer(
         text,
         return_tensors="pt",
@@ -29,70 +60,118 @@ def predict(model, tokenizer, text: str) -> dict:
         max_length=128
     )
 
+    # DistilBERT doesn't use token_type_ids
     inputs.pop("token_type_ids", None)
+
+    # Move tensors to CPU/GPU
+    inputs = {
+        key: value.to(DEVICE)
+        for key, value in inputs.items()
+    }
 
     with torch.no_grad():
         outputs = model(**inputs)
 
-    probs = torch.nn.functional.softmax(outputs.logits, dim=-1)[0]
+    probabilities = torch.nn.functional.softmax(
+        outputs.logits,
+        dim=-1
+    )[0]
 
-    pred_idx = torch.argmax(probs).item()
-    score = probs[pred_idx].item()
-    label = model.config.id2label[pred_idx]
+    predicted_index = torch.argmax(
+        probabilities
+    ).item()
+
+    confidence = probabilities[
+        predicted_index
+    ].item()
+
+    predicted_label = model.config.id2label[
+        predicted_index
+    ]
 
     return {
         "text": text,
-        "label": label,
-        "score": round(score, 4)
+        "label": predicted_label,
+        "confidence": round(confidence, 4)
     }
 
 
+# ---------------------------------------------------------------------
+# Main Application
+# ---------------------------------------------------------------------
 def main():
+
     hf_token = os.getenv("HF_TOKEN")
+
     model_name = os.getenv(
         "HF_MODEL",
-        "nagaananth/MLOPS_group-v2"
+        "nagaananth/MLOPS_group-v1"
     )
+
     input_text = os.getenv(
         "INPUT_TEXT",
         "Congratulations! You've won a free iPhone. Click here now."
     )
 
-    if not input_text:
+    if not input_text.strip():
         print(
-            "ERROR: INPUT_TEXT environment variable is empty.",
+            "ERROR: INPUT_TEXT is empty.",
             file=sys.stderr
         )
         sys.exit(1)
 
+    # -------------------------------------------------------------
+    # Hugging Face Authentication
+    # -------------------------------------------------------------
     if hf_token:
         try:
             login(token=hf_token)
+
+            user_info = whoami()
+
             print(
-                f"Authenticated as: {whoami()['name']}"
-            )
-        except Exception as e:
-            print(
-                f"HF authentication failed: {e}"
+                f"Authenticated as: {user_info['name']}"
             )
 
-    print(f"Model : {model_name}")
-    print(f"Input : {input_text}")
+        except Exception as error:
+            print(
+                f"Hugging Face login failed: {error}"
+            )
 
+    # -------------------------------------------------------------
+    # Load Model
+    # -------------------------------------------------------------
     model, tokenizer = load_model_and_tokenizer(
-        model_name,
-        hf_token
+        model_name=model_name,
+        hf_token=hf_token
     )
 
-    prediction = predict(
-        model,
-        tokenizer,
-        input_text
+    # -------------------------------------------------------------
+    # Run Prediction
+    # -------------------------------------------------------------
+    result = predict(
+        model=model,
+        tokenizer=tokenizer,
+        text=input_text
     )
 
-    print("\n=== Prediction Result ===")
-    print(json.dumps(prediction, indent=2))
+    # -------------------------------------------------------------
+    # Display Output
+    # -------------------------------------------------------------
+    print("\n" + "=" * 50)
+    print("Prediction Result")
+    print("=" * 50)
+
+    print(
+        json.dumps(
+            result,
+            indent=2
+        )
+    )
 
 
+# ---------------------------------------------------------------------
+# Entry Point
+# ---------------------------------------------------------------------
 if __name__ == "__main__":
     main()
