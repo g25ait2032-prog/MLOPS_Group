@@ -1,26 +1,42 @@
 import os
 import sys
 import json
-from transformers import pipeline
+import torch
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-def load_pipeline(model_name: str, hf_token: str | None = None):
-    # Removed global login() to bypass the strict whoami-v2 429 rate limit.
-    # Passing token directly inside pipeline handles gated access safely.
-    clf = pipeline(
-        "text-classification",
-        model=model_name,
-        tokenizer=model_name,
-        device=-1,           # CPU inference for container
-        token=hf_token       # Authenticates download directly
-    )
-    return clf
+def load_model_and_tokenizer(model_name: str, hf_token: str | None = None):
+    # Load explicitly instead of using the generic pipeline
+    tokenizer = AutoTokenizer.from_pretrained(model_name, token=hf_token)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, token=hf_token)
+    
+    # Set to evaluation mode (turns off dropout layers for deterministic predictions)
+    model.eval() 
+    return model, tokenizer
 
-def predict(clf, text: str) -> dict:
-    result = clf(text, truncation=True, max_length=128)[0]
+def predict(model, tokenizer, text: str) -> dict:
+    # 1. Tokenize the input text into PyTorch tensors
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=128)
+    
+    # 2. THE FIX: Explicitly remove token_type_ids if they exist
+    if "token_type_ids" in inputs:
+        del inputs["token_type_ids"]
+
+    # 3. Pass the clean tensors into the model
+    with torch.no_grad():
+        outputs = model(**inputs)
+        
+    # 4. Convert raw logits into human-readable probabilities
+    probs = torch.nn.functional.softmax(outputs.logits, dim=-1)[0]
+    
+    # 5. Extract the winning label and score
+    pred_idx = torch.argmax(probs).item()
+    score = probs[pred_idx].item()
+    label = model.config.id2label[pred_idx]
+
     return {
         "text":  text,
-        "label": result["label"],
-        "score": round(result["score"], 4),
+        "label": label,
+        "score": round(score, 4),
     }
 
 def main():
@@ -35,8 +51,8 @@ def main():
     print(f"Model  : {model_name}")
     print(f"Input  : {input_text}")
     
-    clf = load_pipeline(model_name, hf_token)
-    prediction = predict(clf, input_text)
+    model, tokenizer = load_model_and_tokenizer(model_name, hf_token)
+    prediction = predict(model, tokenizer, input_text)
     
     print("\n=== Prediction Result ===")
     print(json.dumps(prediction, indent=2))
