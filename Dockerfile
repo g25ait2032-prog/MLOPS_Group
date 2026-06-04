@@ -1,25 +1,27 @@
-# Use an official lightweight Python runtime as a base image
+# Use a lightweight Python image
 FROM python:3.10-slim
 
-# Set environment variables to prevent Python from writing .pyc files and buffer outputs
+# Task requirement: build argument with sensible default
+ARG HF_MODEL_NAME=nagaananth/MLOPS_group-v2
+
+# Environment settings
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV HF_MODEL=${HF_MODEL_NAME}
 
-# Set the working directory inside the container
+# Working directory
 WORKDIR /app
 
-# Copy the requirements file into the container
+# Install dependencies
 COPY requirements.txt .
 
-# Install dependencies and clear cache to keep the image lightweight
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the entire src directory containing inference.py into the container
+# Copy source code
 COPY src/ ./src/
 
-# Define default fallback environment variables (can be overridden at runtime)
-ENV HF_MODEL="nagaananth/MLOPS_group-v2"
+# Default input (can be overridden at runtime)
 ENV INPUT_TEXT="Default message test."
 
-# Run the inference script when the container launches
+# Run inference
 CMD ["python", "src/inference.py"]
