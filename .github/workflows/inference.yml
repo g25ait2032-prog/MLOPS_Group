@@ -1,34 +1,37 @@
-name: Inference
+name: Spam Classification Inference
 
 on:
   workflow_dispatch:
     inputs:
       input_text:
-        description: 'Text message to classify (Ham or Spam)'
+        description: "Message to classify as Ham or Spam"
         required: true
-        default: 'URGENT! You have won a 1-week cruise! Call 090xxx to claim now!'
+        default: "URGENT! You have won a 1-week cruise! Call 090xxx to claim now!"
 
 jobs:
-  run-inference:
+  inference:
+    name: Run Model Inference
     runs-on: ubuntu-latest
 
+    env:
+      HF_MODEL: nagaananth/MLOPS_group-v2
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Debug HF Token
+      - name: Validate Hugging Face Token
         run: |
           if [ -z "${{ secrets.HF_TOKEN_gr }}" ]; then
-            echo "HF_TOKEN_gr is EMPTY"
+            echo "❌ HF_TOKEN_gr secret is missing"
             exit 1
-          else
-            echo "HF_TOKEN_gr exists"
           fi
+          echo "✅ Hugging Face token detected"
 
-      - name: Set up Docker Buildx
+      - name: Set Up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image
+      - name: Build Inference Image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -37,10 +40,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run Inference Container
+      - name: Execute Inference
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN_gr }}
-          HF_MODEL: "nagaananth/MLOPS_group-v2"
           INPUT_TEXT: ${{ github.event.inputs.input_text }}
         run: |
           docker run --rm \
