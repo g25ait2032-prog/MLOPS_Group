@@ -34,10 +34,10 @@
 
 | Name | Roll Number | Contributions |
 |---|---|---|
-| Member 1 | G25AIT2032 | Data preparation, model training (v1/v2/v3), W&B tracking |
-| Member 2 | XXXXX | Docker, GitHub Actions CI & inference workflows |
-| Member 3 | XXXXX | README, report, code review, evaluation diagnostics |
-| Member 3 | XXXXX | README, report, code review, evaluation diagnostics |
+| Anukumar K | G25AIT2016 | Data preparation, model training (v1, v2, v3), and W&B experiment tracking. |
+| Duggirala Vnaga Ananth | G25AIT2032 | Containerization (Docker), GitHub Actions CI/CD, and inference workflows. |
+| Shrikrishna Tripathi | G25AIT2103 | Documentation (README/Report), code review, and evaluation diagnostics. |
+| Sudeb Ghosh | G25AIT2113 | Experiment analysis, version documentation, and final reporting. |
 
 
 ---
@@ -92,7 +92,7 @@ MLOPS_Group/
 
 ##  Experiment Comparison
 
-| Hyperparameter | v1 | v2 ★ | v3 |
+| Hyperparameter | v1 ★| v2  | v3 |
 |---|---|---|---|
 | Learning Rate | 3e-5 | 2e-5 | 3e-5 |
 | Epochs | 3 | 5 | 4 |
@@ -100,12 +100,18 @@ MLOPS_Group/
 | Warmup Steps | 100 | 200 | 100 |
 | Padding | dynamic | max_length | max_length |
 | Early Stopping | No | Yes (p=2) | Yes (p=2) |
+| fp16 | Yes | Yes | Yes  |
 
-| Metric | v1 | v2 ★ | v3 |
-|---|---|---|---|
-| Accuracy | — | — | — |
-| F1 (weighted) | — | — | — |
-| Val Loss | — | — | — |
+### Training Configuration and Performance
+
+Three fine-tuning experiments were conducted using different hyperparameter configurations. Versions **v2** and **v3** achieved the lowest validation loss while maintaining the same high classification performance (**99.35% accuracy**). Among all runs, **v2** produced the best validation loss (**0.0292**), making it the selected model for final evaluation.
+
+| Version | Learning Rate | Epochs | Batch Size | Accuracy | F1 Weighted | F1 Macro | Precision | Recall | Val Loss |
+| ------- | ------------- | ------ | ---------- | -------- | ----------- | -------- | --------- | ------ | -------- |
+| v1      | 3e-5          | 3      | 16         | 0.9935   | 0.9935      | 0.9849   | 0.9935    | 0.9935 | 0.0539   |
+| v2      | 2e-5          | 5      | 32         | 0.9935   | 0.9935      | 0.9851   | 0.9935    | 0.9935 | 0.0292   |
+| v3      | 2e-5          | 5      | 32         | 0.9935   | 0.9935      | 0.9851   | 0.9935    | 0.9935 | 0.0376   |
+
 
 > Fill in Accuracy, F1, and Val Loss after running both Kaggle experiments. See [W&B dashboard](https://wandb.ai/g25ait2032-iit-jodhpur/MLOPS_Group) for live charts.
 
