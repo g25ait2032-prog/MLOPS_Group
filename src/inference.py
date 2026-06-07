@@ -2,102 +2,48 @@ import os
 import sys
 import json
 import torch
-
-from transformers import (
-    AutoTokenizer,
-    AutoModelForSequenceClassification
-)
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from huggingface_hub import login, whoami
-
 
 # ---------------------------------------------------------------------
 # Device Configuration
 # ---------------------------------------------------------------------
-DEVICE = torch.device(
-    "cuda" if torch.cuda.is_available() else "cpu"
-)
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
-# ---------------------------------------------------------------------
-# Load Model & Tokenizer
-# ---------------------------------------------------------------------
-def load_model_and_tokenizer(
-    model_name: str,
-    hf_token: str | None = None
-):
-    print(f"Loading model: {model_name}")
-    print(f"Using device: {DEVICE}")
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name,
-        token=hf_token
-    )
-
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_name,
-        token=hf_token
-    )
-
+def load_model_and_tokenizer(model_name: str, hf_token: str | None = None):
+    print(f"Loading model: {model_name} on {DEVICE}")
+    tokenizer = AutoTokenizer.from_pretrained(model_name, token=hf_token)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, token=hf_token)
+    
     model.to(DEVICE)
     model.eval()
-
     return model, tokenizer
 
-
-# ---------------------------------------------------------------------
-# Prediction Function
-# ---------------------------------------------------------------------
-def predict(
-    model,
-    tokenizer,
-    text: str
-) -> dict:
-
-    # 1. Tokenize without creating token_type_ids if possible
-    inputs = tokenizer(
-        text,
-        return_tensors="pt",
-        truncation=True,
-        max_length=128
-    )
-
-    # 2. Aggressively remove 'token_type_ids' if it exists in the dictionary
-    if "token_type_ids" in inputs:
-        del inputs["token_type_ids"]
-
-    # 3. Move tensors to CPU/GPU
-    inputs = {
-        key: value.to(DEVICE)
-        for key, value in inputs.items()
-    }
-
-    # 4. Use model call directly
-    with torch.no_grad():
+def predict(model, tokenizer, text: str) -> dict:
+    # Use 'with torch.inference_mode()' for better performance than 'torch.no_grad()'
+    with torch.inference_mode():
+        inputs = tokenizer(
+            text,
+            return_tensors="pt",
+            truncation=True,
+            padding=True, # Added padding for robustness
+            max_length=128
+        ).to(DEVICE)
+        
+        # Modern models often don't need token_type_ids; 
+        # model(**inputs) automatically ignores keys that aren't in the model's forward() signature.
         outputs = model(**inputs)
-
-    probabilities = torch.nn.functional.softmax(
-        outputs.logits,
-        dim=-1
-    )[0]
-
-    predicted_index = torch.argmax(
-        probabilities
-    ).item()
-
-    confidence = probabilities[
-        predicted_index
-    ].item()
-
-    predicted_label = model.config.id2label[
-        predicted_index
-    ]
+        
+        probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)[0]
+        predicted_index = torch.argmax(probabilities).item()
+        confidence = probabilities[predicted_index].item()
+        predicted_label = model.config.id2label[predicted_index]
 
     return {
         "text": text,
         "label": predicted_label,
         "confidence": round(confidence, 4)
     }
-
 
 # ---------------------------------------------------------------------
 # Main Application
