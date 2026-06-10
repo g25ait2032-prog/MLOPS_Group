@@ -13,11 +13,14 @@
 |  HF Model — v1 | [`https://huggingface.co/nagaananth/MLOPS_group-v1`](https://huggingface.co/nagaananth/MLOPS_group-v1) |
 |  HF Model — v2 ★ Best | [`https://huggingface.co/nagaananth/MLOPS_group-v2`](https://huggingface.co/nagaananth/MLOPS_group-v2) |
 |  HF Model — v3 | [`https://huggingface.co/nagaananth/MLOPS_group-v3`](https://huggingface.co/nagaananth/MLOPS_group-v3) |
+|  HF Profile — G25AIT2016 | https://huggingface.co/Aukrk |
 |  W&B Project Dashboard | `https://wandb.ai/g25ait2032-iit-jodhpur/MLOPS_Group` |
 |  Docker Image (GHCR) | `ghcr.io/g25ait2032-prog/mlops_group-inference:latest` |
 |  Kaggle Notebook (v1) | `https://www.kaggle.com/code/your-username/sms-spam-v1` |
 |  Kaggle Notebook (v2) | `https://www.kaggle.com/code/your-username/sms-spam-v2` |
 |  Kaggle Notebook (v3) | `https://www.kaggle.com/code/your-username/sms-spam-v3` |
+|  Kaggle Notebook — Data Prep (G25AIT2016) | https://www.kaggle.com/code/anukumarkg25ait2016/mlops-group36-data-preprocessing-g25ait2016 |
+
 
 >  Replace placeholder Kaggle notebook URLs and member roll numbers before submission.
 
